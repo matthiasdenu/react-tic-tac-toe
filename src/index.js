@@ -29,12 +29,16 @@ class Game extends React.Component {
         const history = this.state.history.slice(0, this.state.stepNumber + 1);
         const current = history[history.length - 1];
         const squares = current.squares.map((val) => val.slice());
+        const xIsNext = this.state.xIsNext
 
-        if (calculateWinner(squares) || squares[row][col]) {
+        // The board of 9 entries will be full before the stepNumber arg matters
+        let winnerObj = calculateWinner(squares, null)
+        if (winnerObj.player || squares[row][col]) {
+            // Skip remaining logic if someone has one or if space is occupied
             return;
         }
 
-        squares[row][col] = this.state.xIsNext ? 'X' : 'O';
+        squares[row][col] = xIsNext ? 'X' : 'O';
 
         this.setState({
             history: history.concat([{
@@ -43,7 +47,7 @@ class Game extends React.Component {
                 col: col
             }]),
             stepNumber: history.length,
-            xIsNext: !this.state.xIsNext,
+            xIsNext: !xIsNext,
         });
     }
 
@@ -68,6 +72,8 @@ class Game extends React.Component {
         const isDescending = this.state.historyIsDescinding;
         const col = current.col;
         const row = current.row;
+        const stepNumber = this.state.stepNumber;
+        const xIsNext = this.state.xIsNext;
 
         let moves = [];
         let description;
@@ -90,16 +96,16 @@ class Game extends React.Component {
             );
         }
 
-        if(this.state.historyIsDescinding)  {
+        if(isDescending)  {
             moves = moves.reverse();
         }
 
-        let winMove = [null, null];
-        if(calculateWinner(squares) &&
-             (calculateWinner(squares) !== null) &&
-               (calculateWinner(squares) !== 'DRAW')) {
-            // this works because new moves can't be made after a win
-            winMove = [current.row, current.col];
+
+        let winLine = null
+        let winnerObj = calculateWinner(squares, stepNumber)
+        if(winnerObj.player){
+            // This works because new moves can't be made after a win
+            winLine = winnerObj.line;
         }
 
         let toggleDescription = isDescending ? "List Ascending" : "List Descending";
@@ -109,12 +115,12 @@ class Game extends React.Component {
                 <div className="game-board">
                     <Board squares={current.squares}
                     onClick={(row, col) => this.handleClick(row, col)}
-                    winMove={winMove}/>
+                    winLine={winLine}/>
                 </div>
                 <div className="game-info">
                     <Status squares={current.squares}
-                    stepNumber={this.state.stepNumber}
-                    xIsNext={this.state.xIsNext}/>
+                    stepNumber={stepNumber}
+                    xIsNext={xIsNext}/>
                     <button onClick={() => this.toggleDescinding()}>
                         {toggleDescription}
                     </button>
@@ -126,9 +132,19 @@ class Game extends React.Component {
 }
 
 class Board extends React.Component {
-    renderSquare(row, col) {
-        let [winRow, winCol] = this.props.winMove;
-        let className = ((winRow == row) && (winCol == col)) ? "square win" : "square";
+    isOnLine(row, col, winLine) {
+        if(winLine) {
+            for(const [wRow, wCol] of winLine) {
+                if ((row === wRow) && (col === wCol)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    renderSquare(row, col, winLine) {
+        const className = this.isOnLine(row, col, winLine) ? "square win" : "square";
         return (<Square
         className={className}
         value={this.props.squares[row][col]}
@@ -138,13 +154,17 @@ class Board extends React.Component {
     render() {
         const width = this.props.squares.length;
         const height = this.props.squares[0].length;
+        const winLine = this.props.winLine;
 
         let row_array = [];
         for(let row = 0; row < width; row++) {
             let squares_array = [];
             for(let col = 0; col < height; col++) {
-                squares_array.push(this.renderSquare(row, col));
+                squares_array.push(this.renderSquare(row, col, winLine));
             }
+            // TODO use inspector to see if I can directly index into a square
+            //   and change its properties, instead of looping and searching
+            //   for a match
             row_array.push(<div className="board-row">{squares_array}</div>);
         }
 
@@ -186,10 +206,10 @@ function Status(props) {
 }
 
 function calculateWinner(squares, stepNumber) {
-    let result = null;
+    let result = {player: null, line: null};
 
     if (stepNumber > 8) {
-        result = 'DRAW';
+        result.player = 'DRAW';
     }
 
     const lines = [
@@ -210,7 +230,8 @@ function calculateWinner(squares, stepNumber) {
         if (squares[a[0]][a[1]] &&
             squares[a[0]][a[1]] === squares[b[0]][b[1]] &&
             squares[a[0]][a[1]] === squares[c[0]][c[1]]) {
-            result = squares[a[0]][a[1]];
+            result.player = squares[a[0]][a[1]];
+            result.line = lines[i]
         }
     }
 
