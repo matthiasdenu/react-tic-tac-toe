@@ -1,3 +1,8 @@
+
+This is my implementation of the the tic-tac-toe tutorial with all the extra features found at [https://reactjs.org/tutorial/tutorial.html](https://reactjs.org/tutorial/tutorial.html)
+
+* * *
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
