@@ -185,7 +185,7 @@ function Square(props) {
 
 function Status(props) {
     let status;
-    switch (calculateWinner(props.squares, props.stepNumber)) {
+    switch (calculateWinner(props.squares, props.stepNumber).player) {
         case 'X':
             status = 'Winner: X';
             break;
